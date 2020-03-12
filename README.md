@@ -1,3 +1,3 @@
 # Wumpus-World
-# Environment by professor
+# Work on MyAI.py with my partner
 # Unfinished
