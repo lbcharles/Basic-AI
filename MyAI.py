@@ -49,12 +49,6 @@ class MyAI ( Agent ):
        self.__action =[]
        self.__move=[]
 
-    def set(self,set1,x,y,z):
-        self.__x=x
-        self.__y=y
-        self.__dir=z
-        self.__safe = set1
-
     def cal_cost(self,pairs_a,pairs_b,a_dir):
         #left
         score=0
@@ -90,7 +84,7 @@ class MyAI ( Agent ):
     def sort_list(self,l,pairs,curr_dir):
         for i in range(len(l)):
             l[i] = (l[i], self.cal_cost(pairs,l[i],curr_dir))
-        sort= sorted(l,key= lambda x:(x[1],x[0]))
+        sort= sorted(l,key= lambda x:(x[1],x[0][1],x[0][0]))
         return [j[0] for j in sort]        
 
 
@@ -195,8 +189,8 @@ class MyAI ( Agent ):
                             self.__wupus.append(check_l[1])
                         if check_l[1] in self.__property and self.__property[check_l[1]] != 'W':
                             self.__wupus.append(check_l[0])
-        if self.__wupus:
-            self.__potential_wupus=set()
+        # if self.__wupus:
+        #     self.__potential_wupus=set()
         return self.__wupus
 
 
@@ -211,7 +205,7 @@ class MyAI ( Agent ):
             self.__stench.add(pairs)
             self.__safe.add(pairs)
             #wupus may appear in any of the neighbors of S
-            if not self.__wupus or "died" not in self.__wupus:
+            if "died" not in self.__wupus:
                 self.__potential_wupus.update(set(self.get_neighbor(pairs)))
 
         if 'G' in self.__property[pairs]:
@@ -339,35 +333,51 @@ class MyAI ( Agent ):
             return eval(action)
 
 
-    def out_range(self):
-        l1=list(self.__potential_pit)
-        for i in l1:
-            if i [0] > self.__row and self.__row!=0:
-                l1.remove(i)
+    def out_range(self,p):
+        l1=[]
+        for i in p:
+            if i[0] > self.__row and self.__row!=0:
+                l1.append(i)
             if i[1]> self.__col and self.__col !=0:
-                l1.remove(i)
-        self.__potential_pit = set(l1)
-        l2=list(self.__potential_wupus)
-        for j in l2:
-            if j[0] > self.__row and self.__row!=0:
-                l2.remove(j)
-            if j[1] > self.__col and self.__col !=0:
-                l2.remove(j)
-        self.__potential_wupus = set(l2)
-        l3 = list(self.__visited)
-        for h in l3:
-            if h[0] > self.__row and self.__row!=0:
-                l3.remove(h)
-            if h[1] > self.__col and self.__col !=0:
-                l3.remove(h)
-        self.__visited = set(l3)
-        l4 = list(self.__safe)
-        for k in l4:
-            if k[0] >self.__row and self.__row!=0:
-                l4.remove(k)
-            if k[1] >self.__col and self.__col!=0:
-                l4.remove(k)
-        self.__safe = set(l4)
+                l1.append(i)
+        return l1
+
+        # l1=list(self.__potential_pit)
+        # for i in l1:
+        #     if i [0] > self.__row and self.__row!=0:
+        #         l1.remove(i)
+        #     if i[1]> self.__col and self.__col !=0:
+        #         l1.remove(i)
+        # self.__potential_pit = set(l1)
+        # l2=list(self.__potential_wupus)
+        # for j in l2:
+        #     if j[0] > self.__row and self.__row!=0:
+        #         l2.remove(j)
+        #     if j[1] > self.__col and self.__col !=0:
+        #         l2.remove(j)
+        # self.__potential_wupus = set(l2)
+        # l3 = list(self.__visited)
+        # for h in l3:
+        #     if h[0] > self.__row and self.__row!=0:
+        #         l3.remove(h)
+        #     if h[1] > self.__col and self.__col !=0:
+        #         l3.remove(h)
+        # self.__visited = set(l3)
+        # l4 = list(self.__safe)
+        # for k in l4:
+        #     if k[0] >self.__row and self.__row!=0:
+        #         l4.remove(k)
+        #     if k[1] >self.__col and self.__col!=0:
+        #         l4.remove(k)
+        # self.__safe = set(l4)
+        # list1=[]
+        # for i in self.__frontier:
+        #     if i[0] > self.__row and self.__row!=0:
+        #         list1.append(i)
+        #     if i[1]>self.__col and self.__col !=0:
+        #         list1.append(i)
+        # for item in list1:
+        #     self.__frontier.remove(item)
 
 
     def getAction( self, stench, breeze, glitter, bump, scream ):
@@ -378,7 +388,16 @@ class MyAI ( Agent ):
             elif self.__dir == 3:#up
                 self.__row=self.__x-1
                 self.__x -=1
-            self.out_range()
+            for i in self.out_range(self.__potential_pit):
+                self.__potential_pit.discard(i)
+            for j in self.out_range(self.__potential_wupus):
+                self.__potential_wupus.discard(j)
+            for k in self.out_range(self.__visited):
+                self.__visited.discard(k)
+            for h in self.out_range(self.__safe):
+                self.__safe.discard(h)
+            for l in self.out_range(self.__frontier):
+                self.__frontier.remove(l)
         if glitter:
             self.__property[(self.__x,self.__y)].add('G')
             self.update_property( (self.__x,self.__y) )
@@ -387,7 +406,6 @@ class MyAI ( Agent ):
             return Agent.Action.GRAB
         if stench:
             self.__property[(self.__x,self.__y)].add('S')
-            #self.update_property( (self.__x,self.__y) )
         if breeze:
             if self.__x==1 and self.__y==1:
                 return Agent.Action.CLIMB
@@ -395,13 +413,19 @@ class MyAI ( Agent ):
         self.update_property( (self.__x,self.__y) )
         if scream:
             if self.__wupus:
+                self.__wupus.append("died")
                 if self.__wupus[0] not in self.__potential_pit:
-                    self.__safe.add(self.__wupus[0])
-                    self.__frontier.append(self.__wupus[0])
+                    #self.__safe.add(self.__wupus[0])
+                    #self.__frontier.append(self.__wupus[0])
+                    for i in self.__potential_wupus:
+                        if i not in self.__potential_pit and i not in self.__visited:
+                            self.__frontier.append(i)
+                            self.__safe.add(i)
                     self.__frontier = self.sort_list(self.__frontier,(self.__x,self.__y),self.__dir)
             else:
                 self.__wupus = ["died"]
                 self.__property[(self.__x,self.__y)].discard('S')
+            self.__potential_wupus = set()
 
         self.__property[(self.__x,self.__y)].add(' ')
         self.update_property( (self.__x,self.__y) )
@@ -444,3 +468,6 @@ class MyAI ( Agent ):
             self.__move = path_to_t
             self.__move.append("Agent.Action.CLIMB")
             return self.move_action(False,True)
+
+
+
